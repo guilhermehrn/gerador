@@ -8,6 +8,10 @@
 #ifndef ADMBASE_H_
 #define ADMBASE_H_
 
+
+/**
+ *
+ */
 namespace ADMBASE {
 
 class admBase {

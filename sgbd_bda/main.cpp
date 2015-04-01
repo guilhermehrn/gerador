@@ -25,5 +25,9 @@ int main(int argc, char *argv[]) {
 	cout<<"6>SELECT país, sexo, count(*) \n  FROM pessoas \n  WHERE país = 15 AND sexo = 1;"<<endl<<endl;
 	cout<<"7>SELECT país, sexo, count(*) \n  FROM pessoas \n  WHERE país >=0 AND país <=15 \n  GROUP BY país, sexo;"<<endl<<endl;
 
+	int a;
+	cout<<"Insira algum valor"<<endl;
+	cin>>a;
+
 	return 0;
 }

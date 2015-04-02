@@ -35,6 +35,8 @@ void instrucoes() {
 	exit(EXIT_SUCCESS);
 }
 
+
+
 /* --------------------------------------------------------------------------------
  Função que recebe os parâmetros do programa.
  Recebe: a quantidade de parâmetros, a string de parâmetros, a quantidade de

@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
+#include <sys/time.h>
 
 /* --------------------------------------------------------------------------------
  Função que printa na tela como os parâmetros devem ser passados para o programa.
@@ -35,8 +37,6 @@ void instrucoes() {
 	exit(EXIT_SUCCESS);
 }
 
-
-
 /* --------------------------------------------------------------------------------
  Função que recebe os parâmetros do programa.
  Recebe: a quantidade de parâmetros, a string de parâmetros, a quantidade de
@@ -45,6 +45,7 @@ void instrucoes() {
  ------------------------------------------------------------------------------*/
 void recebeParametros(int argc, char* argv[], long int* qtTuplas,
 		int* maxTuplasInsert, int* maxTuplasFile) {
+
 	int opt;
 
 	/* Enquanto houver parâmetros a serem lidos */
@@ -95,24 +96,6 @@ void recebeParametros(int argc, char* argv[], long int* qtTuplas,
 	}
 }
 
-int binToInt(char* bin) {
-	int tam, fator, inteiro;
-	tam = strlen(bin);
-	fator = 1;
-	inteiro = 0;
-
-	printf("%d\n", tam);
-
-	for (; tam > 0; tam--) {
-		if (bin[tam - 1] - 48)
-			inteiro += fator;
-
-		fator = 2 * fator;
-	}
-
-	return inteiro;
-}
-
 /* --------------------------------------------------------------------------------
  Função que retorna a quantidade de dígitos de um número.
  Entrada: um inteiro.
@@ -120,11 +103,8 @@ int binToInt(char* bin) {
  ------------------------------------------------------------------------------*/
 int numeroDigitos(int numero) {
 	int i;
-
-	/* Avaliando a quantidade de divisões possíveis por 10 */
 	for (i = 0; numero > 0; i++)
 		numero /= 10;
-
 	return i;
 }
 
@@ -133,36 +113,38 @@ int numeroDigitos(int numero) {
  Entrada: um inteiro.
  Retorna: a string equivalente ao número.
  ------------------------------------------------------------------------------*/
-char*
-intToChar(int numero) {
-	/* String para guardar o número escrito */
-	char* palavra;
+char* intToChar(int numero) {
+
+	char* palavra; /* String para guardar o número escrito */
 
 	/* Alocando memória para a quantidade exata de dígitos */
 	palavra = malloc(sizeof(char) * numeroDigitos(numero));
-
 	sprintf(palavra, "%d", numero);
-
 	return palavra;
 }
 
-char* intToBinario(unsigned int numero, int tamanho) {
+/*-------------------------------------------------------------------------------
+  Função que transforma um numero inteiro em uma string com o binario correspodente
+  Entrada: um inteiro longo a ser trasformado, e o tamanho do binario de saida.
+  Retorna: a string com binario equivalente.
+ --------------------------------------------------------------------------------*/
+void intToBinario(unsigned int numero, int tamanho, char *binario) {
 	int i, resto, tam;
-	char *aux = (char*) malloc(sizeof(char) * 25);
-	char *aux2 = (char*) malloc(sizeof(char) * 2);
+	//char *aux = (char*) malloc (sizeof(char) * 25);
+	char *aux2=(char*) malloc (sizeof(char) * 2);
 
 	tam = tamanho;
 	for (i = 0; i < 25; i++) {
-		aux[i] = '0';
+		binario[i] = '0';
 	}
 	if (numero == 1) {
-		aux[tamanho - 1] = '1';
+		binario[tamanho - 1] = '1';
 	} else {
 		do {
 			tam--;
 			resto = numero % 2;
 			sprintf(aux2, "%d", resto);
-			aux[tam] = aux2[0];
+			binario[tam] = aux2[0];
 
 			numero = numero / 2;
 
@@ -170,52 +152,45 @@ char* intToBinario(unsigned int numero, int tamanho) {
 	}
 
 	for (i = tamanho; i < 25; i++) {
-		aux[i] = '\0';
+		binario[i] = '\0';
 	}
-	return aux;
+	free(aux2);
 }
-
-
 /* --------------------------------------------------------------------------------
  Função que gera a base de tuplas.
  Recebe: a
  ------------------------------------------------------------------------------*/
 void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 	int i, j;
-	/* País do qual os registros estão sendo impressos */
-	int paisAtual = 0;
-	/* Contador do número do arquivo em qual o dados estão sendo gravados */
-	int contadorSQL = 1;
-	/* Variável para acompanhar a criação dos dados */
-	int fator = qtTuplas / 10;
-	/* Variável para colocar os dados nas tuplas */
-	unsigned int dado = 1;
-	/* Variável que vai armazenar um país aleatório */
-	unsigned int aleatorioPais;
-	/* Variável que vai armazenar um sexo aleatório */
-	unsigned int aleatorioSexo;
-	/* Variável que vai controlar se um separador homem/mulher já foi usado em cada arquivo */
-	int separador = 0;
+	int paisAtual = 0; /* País do qual os registros estão sendo impressos */
+	int contadorSQL = 1; /* Contador do número do arquivo em qual o dados estão sendo gravados */
+	int fator = qtTuplas / 10; /* Variável para acompanhar a criação dos dados */
+	unsigned long int dado = 1; /* Variável para acompanhar a criação dos dados */
+	unsigned int aleatorioPais; /* Variável que vai armazenar um país aleatório */
+	unsigned int aleatorioSexo; /* Variável que vai armazenar um sexo aleatório */
+	int separador = 0; /* Variável que vai controlar se um separador homem/mulher já foi usado em cada arquivo */
+	unsigned long int aux; /*auxliar para ajudar nas operações bit a bit*/
+	unsigned long int aux2;/*auxliar para ajudar nas operações bit a bit*/
+	unsigned long int buff[1];/*buf para armazenar no arquivo binario*/
 
 
+	FILE* bin; /* Ponteiro para os arquivos binários */
+	FILE* sql; /* ponteiro para os arquivos SQL */
+
+	/*usado para guarda uma string de binarios*/
 	char *binario = (char *) malloc(sizeof(char) * 25);
 
-
 	/* Vetor para fazer o sorteo da quantidade de tuplas de cada país */
-	int* pais = malloc(sizeof(int) * 256);
+	int* pais = (int *) malloc(sizeof(int) * 256);
 
 	/* Vetor para fazer o sorteo da quantidade de tuplas de cada sexo */
-	long int* sexoPais = malloc(sizeof(long int) * 256);
+	long int* sexoPais = (long int *) malloc(sizeof(long int) * 256);
 
 	/* String usada para abrir os arquivos binários */
-	char* saidaBin = malloc(sizeof(char) * 20);
-	/* String usada para abrir os arquivos SQL */
-	char* saidaSQL = malloc(sizeof(char) * 20);
+	char* saidaBin = (char *) malloc(sizeof(char) * 20);
 
-	/* Ponteiro para os arquivos binários */
-	FILE* bin;
-	/* ponteiro para os arquivos SQL */
-	FILE* sql;
+	/* String usada para abrir os arquivos SQL */
+	char* saidaSQL = (char *) malloc(sizeof(char) * 20);
 
 	/* Alimentando o fator aleatoriedade com o tempo atual */
 	srand((unsigned) time(NULL));
@@ -240,7 +215,7 @@ void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 	/* Achando o primeiro país com registros */
 	while (!pais[paisAtual])
 		paisAtual++;
-
+/*
 	for (j = 0; j < 256; j++)
 		printf("%d ", pais[j]);
 	printf("\n\n");
@@ -248,12 +223,13 @@ void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 	for (j = 0; j < 256; j++)
 		printf("%lu ", sexoPais[j]);
 	printf("\n\n");
-
+*/
 	/* Abrindo o primeiro arquivo de registros binários */
 	strcpy(saidaBin, "bin/");
 	strcat(saidaBin, intToChar(paisAtual));
 	strcat(saidaBin, ".pais");
-	bin = fopen(saidaBin, "w");
+
+	bin = fopen(saidaBin, "wb");
 
 	/* Abrindo o primeiro arquivo de registros sql */
 	sql = fopen("sql/0.sql", "w");
@@ -271,7 +247,7 @@ void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 			while (pais[paisAtual] == 0)
 				paisAtual++;
 
-			//printf("%d\n", paisAtual); // Use esse print para ver os país que tem registro(s)
+			//printf("<<<%d>>>\n", paisAtual); // Use esse print para ver os país que tem registro(s)
 
 			/* Verificando se não ultrapassou a quantidade de países, não deve cair aqui */
 			if (paisAtual > 256) {
@@ -283,19 +259,20 @@ void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 			strcpy(saidaBin, "bin/");
 			strcat(saidaBin, intToChar(paisAtual));
 			strcat(saidaBin, ".pais");
-			bin = fopen(saidaBin, "w");
+			bin = fopen(saidaBin, "wb");
 
 			/* Zera o separador para poder colocar o mesmo no próximo arquivo */
 			separador = 0;
 		}
 
 		/* Essa parte cria um novo arquivo SQL para que não fiquem muito grande */
+
 		if (i % maxTuplasFile == 0 && i != 0) {
 			/* Colocando o fim ao último arquivo sql */
-			fprintf(sql, ";\n");
+		//	fprintf(sql, ";\n");
 
 			/* fechando o arquivo sql para começar um novo */
-			fclose(sql);
+		fclose(sql);
 
 			/* Abrindo um arquivo sql */
 			strcpy(saidaSQL, "sql/");
@@ -303,72 +280,120 @@ void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 			strcat(saidaSQL, ".sql");
 			sql = fopen(saidaSQL, "w");
 
-			fprintf(sql,
-					"INSERT INTO pessoas (sexo,idade,renda_mensal,escolaridade,idioma,pais,localizador) VALUES ");
+			contadorSQL ++;
+
+		//	fprintf(sql,
+		//			"INSERT INTO pessoas (sexo,idade,renda_mensal,escolaridade,idioma,pais,localizador) VALUES ");
 		}
 
 		/* Verificando se alcançou o máximo de tuplas por INSERT */
-		else if (i % maxTuplasInsert == 0) {
-			if (i != 0)
-				fprintf(sql, ";\n");
-			fprintf(sql,
-					"INSERT INTO pessoas (sexo,idade,renda_mensal,escolaridade,idioma,pais,localizador) VALUES ");
-		}
+		//else if (i % maxTuplasInsert == 0) {
+		//	if (i != 0)
+		//		fprintf(sql, ";\n");
+		//	fprintf(sql,
+		//			"INSERT INTO pessoas (sexo,idade,renda_mensal,escolaridade,idioma,pais,localizador) VALUES ");
+		//}
 
-		else
-			fprintf(sql, ",");
+	//	else
+		//	fprintf(sql, ",");
 
 		/* Imprime em tela a quantidade de tuplas já processadas */
 		if (i % fator == 0 && i != 0)
 			printf("(%d tuplas)\n", i);
 
 		/* Separador no binário entre homens e mulheres */
-		if (!sexoPais[paisAtual] && !separador) {
-			fprintf(bin, "\n");
-			separador = 1;
-		}
+		//if (!sexoPais[paisAtual] && !separador) {
+			//fprintf(bin, "\n");
+		//	separador = 1;
+		//}
+
+		aux = 0;
+		aux2 = 0;
+		dado = 0;
 
 		/* Sexo */
 		dado = rand() % 2;
-		binario = intToBinario(dado,1);
-		fprintf(sql, "(b'%s',", binario);
-		//fprintf (bin,"%X ", dado);
+		aux2 = dado;
+		aux2 = aux2 << 63;
+		aux = aux | aux2;
+		intToBinario(dado, 1,binario);
+
+		fprintf(sql, "%s,", binario);
+		//fprintf (bin,"%u ", dado);
 
 		/* Idade */
+		dado = 0;
+		aux2 = 0;
+
 		dado = rand() % 128;
-		binario = intToBinario(dado,7);
-		fprintf(sql, "b'%s',", binario);
-		//fprintf(bin, "%X ", dado);
+		aux2 = dado;
+		aux2 = aux2 << 56;
+		aux = aux | aux2;
+		intToBinario(dado, 7,binario);
+
+		fprintf(sql, "%s,", binario);
+		//fprintf(bin, "%u ", dado);
 
 		/* Renda */
+		dado = 0;
+		aux2 = 0;
 		dado = rand() % 1024;
-		binario = intToBinario(dado,10);
-		fprintf(sql, "b'%s',", binario);
-		//fprintf(bin, "%X ", dado);
+		aux2 = dado;
+		aux2 = aux2 << 46;
+		aux = aux | aux2;
+		intToBinario(dado, 10,binario);
+		fprintf(sql, "%s,", binario);
+		//fprintf(bin, "%u ", dado);
 
 		/* Escolaridade */
+		dado = 0;
+		aux2 = 0;
 		dado = rand() % 4;
-		binario = intToBinario(dado,2);
-		fprintf(sql, "b'%s',", binario);
-		//fprintf(bin, "%X ", dado);
+		aux2 = dado;
+		aux2 = aux2 << 44;
+		aux = aux | aux2;
+		intToBinario(dado, 2,binario);
+		fprintf(sql, "%s,", binario);
+		//fprintf(bin, "%u ", dado);
 
 		/* Idioma */
+		dado = 0;
+		aux2 = 0;
 		dado = rand() % 4096;
-		binario = intToBinario(dado,12);
-		fprintf(sql, "b'%s',", binario);
-		//fprintf(bin, "%X ", dado);
+		aux2 = dado;
+		aux2 = aux2 << 32;
+		aux = aux | aux2;
+		intToBinario(dado, 12,binario);
+		fprintf(sql, "%s,", binario);
+		//fprintf(bin, "%u ", dado);
 
 		/* País */
-		dado = rand() % 256;
-		binario = intToBinario(dado,8);
-		fprintf(sql, "b'%s',", binario);
-		//fprintf (bin, "%X ", dado); //Não precisa pois os registros estão separados por esse valor
+		dado = 0;
+		aux2 = 0;
+		dado = paisAtual;
+		aux2 = dado;
+		aux2 = aux2 << 24;
+		aux = aux | aux2;
+		intToBinario(dado, 8,binario);
+		fprintf(sql, "%s,", binario);
+		//fprintf (bin, "%u ", dado);
 
 		/* Localizador */
+		dado = 0;
+		aux2 = 0;
 		dado = rand() % 16777216;
-		binario = intToBinario(dado,24);
-		fprintf(sql, "b'%s')", binario);
-		//fprintf(bin, "%X\n", dado);
+		aux2 = dado;
+		aux = aux | aux2;
+		intToBinario(dado, 24,binario);
+		fprintf(sql, "%s", binario);
+		//fprintf(bin, "%u\n", dado);
+
+		buff[0] = aux;
+		long int g = aux;
+		//printf("%lx", g);
+		fwrite(&buff[0], 8, 1, bin);
+
+		fprintf(sql, "\n");
 
 		/* Decrementando a quantidade de registros de um país */
 		pais[paisAtual] = pais[paisAtual] - 1;
@@ -376,7 +401,7 @@ void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 		sexoPais[paisAtual] = sexoPais[paisAtual] - 1;
 	}
 
-	fprintf(sql, ";\n");
+	//fprintf(sql, ";\n");
 	fclose(sql);
 	fclose(bin);
 
@@ -386,31 +411,26 @@ void geraBaseTupla(long int qtTuplas, int maxTuplasInsert, int maxTuplasFile) {
 }
 
 int main(int argc, char* argv[]) {
-	/* Quantidade de registros a serem gerados */
-	long int qtTuplas = 0;
-	/* Máximo de tuplas por INSERT */
-	int maxTuplasInsert = 2000;
-	/* Máximo de tuplas por arquivo */
-	int maxTuplasFile = 5000000;
+	long int qtTuplas = 6000000000; /*Quantidade de registros a serem gerados*/
+	int maxTuplasInsert = 2000; /*Máximo de tuplas por INSERT*/
+	int maxTuplasFile = 1000000000;/*Máximo de tuplas por arquivo*/
+	double tInicial; /* Variável para armazenar o tempo inicial */
+	struct timeval tempo; /* Estrutura para medir o tempo */
+	double tFinal; /* Variável para armazenar o tempo final */
 
 	/* Verificando se foram passados parâmetros para o programa */
-	if (argc < 2)
-		instrucoes();
+	//if (argc < 2) {
+	//	instrucoes();
+	//}
 
 	/* Lendo os parâmetros recebidos */
-	recebeParametros(argc, argv, &qtTuplas, &maxTuplasInsert, &maxTuplasFile);
+	//recebeParametros(argc, argv, &qtTuplas, &maxTuplasInsert, &maxTuplasFile);
 
-	/* Estrutura para medir o tempo */
-	struct timeval tempo;
-	/* Variável para armazenar o tempo inicial */
-	double tInicial;
-	/* Variável para armazenar o tempo final */
-	double tFinal;
 	/* Arquivo para armazenar o tempo final */
 	FILE* resultadoTempo = fopen("resultadoTempo.txt", "w");
 
 	/* Início da cronometragem de tempo da etapa de Descritor */
-	gettimeofday(&tempo, NULL);
+	gettimeofday (&tempo, NULL);
 	tInicial = tempo.tv_sec + (tempo.tv_usec / 1000000.0);
 
 	printf("Iniciando a criação do dataset...\n");
